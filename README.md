@@ -26,7 +26,7 @@ g++ -o game.exe game.cpp -luser32 -lgdi32 -lopengl32 -lgdiplus -lShlwapi -ldwmap
 g++ -o game game.cpp -lX11 -lGL -lpthread -lpng -lstdc++fs -std=c++17
 ```
 
-### Mac OS X
+### Mac
 
 ```
 clang++ -arch x86_64 -std=c++17 -mmacosx-version-min=10.15 -Wall -framework OpenGL 
