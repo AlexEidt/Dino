@@ -106,7 +106,7 @@ public:
 
 		// Draw Dinosaur Character.
 		elapsed += fElapsedTime;
-		if (elapsed > period * 3) // Update every 3 frames.
+		if (elapsed > period * 3.0f) // Update every 3 frames.
 		{
 			elapsed = 0.0f;
 			if (gameOver) // Game over.
@@ -328,7 +328,7 @@ public:
 	void DrawEnemies(float fElapsedTime)
 	{
 		pteranodonTimer += fElapsedTime;
-		if (pteranodonTimer > period * 5) // Update every 5 frames.
+		if (pteranodonTimer > period * 5.0f) // Update every 5 frames.
 		{
 			pteranodonTimer = 0.0f;
 			// Flap the wings of the pteranodons.
