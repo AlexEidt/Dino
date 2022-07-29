@@ -44,7 +44,8 @@ private:
 	int maxScore = 0;
 	int score = 0;
 
-	struct enemy {
+	struct enemy
+	{
 		int width;
 		int height;
 		int index;
@@ -510,7 +511,6 @@ public:
 
 	olc::Decal* getSprite(int type, int index)
 	{
-		olc::Decal* sprite;
 		switch (type)
 		{
 		case CACTUS:
