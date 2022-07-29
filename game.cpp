@@ -232,7 +232,7 @@ public:
 		{
 			if (!scoreBlinking) scoreBlinking = true;
 			scoreTimer += fElapsedTime;
-			if (scoreTimer > 2) // 2 second timer.
+			if (scoreTimer > 2.0f) // 2 second timer.
 			{
 				scoreBlinking = false;
 				scoreTimer = 0.0f;
@@ -361,9 +361,13 @@ public:
 		if (score >= 25 && rand() % 200 == 0)
 		{
 			if (rand() % 200 > 50)
+			{
 				addCactus();
+			}
 			else
-				addPteranodon();			
+			{
+				addPteranodon();
+			}			
 		}
 	}
 
@@ -494,7 +498,9 @@ public:
 			{
 				olc::vf2d last = clouds.back();
 				if (last.x < screenWidth - 3 * cloudWidth / 2)
+				{
 					clouds.push_back({ (float) screenWidth, (float) y });
+				}
 			}
 		}
 	}
