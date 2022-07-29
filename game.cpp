@@ -199,6 +199,9 @@ public:
 				float px1 = position.x + dinoWidth;
 				float py1 = position.y + dinoHeight;
 
+				if (px0 > ex1) break;
+
+				// Rectangular Bounding Box Method.
 				bool noOverlap = ex0 > px1 || px0 > ex1 || ey0 > py1 || py0 > ey1;
 				if (!noOverlap)
 				{
