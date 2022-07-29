@@ -1,5 +1,11 @@
+// Alex Eidt
+// Dino Game
+
 #define OLC_PGE_APPLICATION
 #include "olcPixelGameEngine.h"
+
+#define OLC_PGEX_SOUND
+#include "olcPGEX_Sound.h"
 
 #define CACTUS 0
 #define PTERANODON 1
@@ -15,6 +21,7 @@ public:
 private:
 	float time = 0.0f;
 	float groundSpeed = 500.0f;
+	float maxGroundSpeed = 1500.0f;
 	float cloudSpeed = 150.0f;
 	float fps = 30.0f;
 	float period = 1 / fps;
@@ -50,11 +57,24 @@ private:
 	std::vector<olc::vf2d> clouds;
 	std::vector<enemy> enemies;
 
+	// Audio.
+	std::unordered_map<std::string, int> sounds;
+
 public:
 	bool OnUserCreate() override
 	{
 		std::filesystem::path dir (std::filesystem::current_path().string());
     	std::filesystem::path spriteDir ("sprites");
+		std::filesystem::path audioDir ("audio");
+
+		olc::SOUND::InitialiseAudio(44100, 1, 8, 512);
+
+		// Fill in the "audio" map.
+		for (const auto& file : std::filesystem::directory_iterator(dir / audioDir))
+		{
+			std::string name = file.path().stem().string();
+			sounds[name] = olc::SOUND::LoadAudioSample(file.path().string());
+		}
 
 		// Fill in the "sprites" map with all the sprites in the "sprites" directory.
 		for (const auto& file : std::filesystem::directory_iterator(dir / spriteDir))
@@ -75,10 +95,11 @@ public:
 	{
 		Clear(olc::Pixel(230, 230, 230));
 
-		DrawScore(gameOver ? 0.0f : fElapsedTime);
-		DrawGround(gameOver ? 0.0f : fElapsedTime);
-		DrawClouds(gameOver ? 0.0f : fElapsedTime);
-		DrawEnemies(gameOver ? 0.0f : fElapsedTime);
+		float elapsedTime = gameOver ? 0.0f : fElapsedTime;
+		DrawScore(elapsedTime);
+		DrawGround(elapsedTime);
+		DrawClouds(elapsedTime);
+		DrawEnemies(elapsedTime);
 
 		int screenWidth = ScreenWidth();
 		int screenHeight = ScreenHeight();
@@ -100,10 +121,13 @@ public:
 				dinoIndex = rand() % 15 ? 1 : 2;
 
 			// Update score.
-			if (started && !gameOver) {
+			if (started && !gameOver)
+			{
 				score++;
+				if (score > 0 && score % 100 == 0) olc::SOUND::PlaySample(sounds["score"]);
 			}
 		}
+
 		olc::Decal* dino = sprites["dino_" + std::to_string(dinoIndex)];
 		int dinoWidth = dino->sprite->width;
 		int dinoHeight = dino->sprite->height;
@@ -117,12 +141,17 @@ public:
 		// If space is pressed, start the game.
 		if (GetKey(olc::Key::SPACE).bPressed)
 		{
-			if (!started) {
+			if (!started)
+			{
 				gameOver = false;
 				started = true;
 				enemies.clear();
 			}
-			if (started) isJumping = true;
+			if (started)
+			{
+				isJumping = true;
+				if (jumpTimer == 0.0f) olc::SOUND::PlaySample(sounds["jump"]);
+			};
 		}
 
 		// If down arrow is pressed, duck the dinosaur.
@@ -180,10 +209,19 @@ public:
 					scoreTimer = 0;
 					scoreBlinking = false;
 					groundSpeed = 500.0f;
+
+					olc::SOUND::PlaySample(sounds["gameover"]);
 					break;
 				}
 			}
 		}
+
+		return true;
+	}
+
+	bool OnUserDestroy()
+	{
+		olc::SOUND::DestroyAudio();
 
 		return true;
 	}
@@ -194,7 +232,7 @@ public:
 		{
 			if (!scoreBlinking) scoreBlinking = true;
 			scoreTimer += fElapsedTime;
-			if (scoreTimer > 4) // 4 second timer.
+			if (scoreTimer > 2) // 2 second timer.
 			{
 				scoreBlinking = false;
 				scoreTimer = 0.0f;
@@ -222,6 +260,7 @@ public:
 			{
 				drawNumber(score, offset, 5);
 			}
+
 			if (maxScore > 0)
 			{
 				offset += 6 * digitWidth;
@@ -283,6 +322,7 @@ public:
 		}
 
 		time += fElapsedTime;
+		groundSpeed = std::min(groundSpeed + fElapsedTime, maxGroundSpeed);
 	}
 
 	void DrawEnemies(float fElapsedTime)
