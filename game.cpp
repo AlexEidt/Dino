@@ -136,7 +136,7 @@ public:
 		int maxJumpHeight = dinoHeight * 15;
 		float jumpParabola = -maxJumpHeight * (jumpTimer * jumpTimer - jumpDuration * jumpTimer);
 		position.x = 60.0f;
-		position.y = screenHeight - dinoHeight - 8 - jumpParabola;
+		position.y = std::max(screenHeight - dinoHeight - 8 - jumpParabola, 0.0f);
 		DrawDecal(position, dino);
 
 		// If space is pressed, start the game.
