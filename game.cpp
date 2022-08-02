@@ -86,7 +86,6 @@ public:
 		olc::SOUND::InitialiseAudio(44100, 1, 8, 512);
 
 		std::vector<std::string> files;
-		// Fill in the "audio" map.
 		for (const auto& file : std::filesystem::directory_iterator(dir / audioDir))
 		{
 			files.push_back(file.path().string());
@@ -102,7 +101,6 @@ public:
 		}
 
 		files.clear();
-		// Fill in the "sprites" map with all the sprites in the "sprites" directory.
 		for (const auto& file : std::filesystem::directory_iterator(dir / spriteDir))
 		{
 			files.push_back(file.path().string());
