@@ -7,8 +7,23 @@
 #define OLC_PGEX_SOUND
 #include "olcPGEX_Sound.h"
 
-#define CACTUS 0
-#define PTERANODON 1
+// Audio.
+#define GAMEOVER_AUDIO 0
+#define JUMP_AUDIO 1
+#define SCORE_AUDIO 2
+
+// Sprites.
+#define NUMBER 0
+#define CHAR_H 10
+#define CHAR_I 11
+#define ARROW 12
+#define CACTUS 12
+#define CLOUD 22
+#define DINO 23
+#define GAMEOVER 32
+#define GROUND 33
+#define PTERANODON 33
+#define SPRITES 36
 
 class DinoGame : public olc::PixelGameEngine
 {
@@ -54,12 +69,12 @@ private:
 	};
 
 	olc::vf2d position; // Player position.
-	std::unordered_map<std::string, olc::Decal*> sprites;
+	std::vector<olc::Decal*> sprites;
 	std::vector<olc::vf2d> clouds;
 	std::vector<enemy> enemies;
 
 	// Audio.
-	std::unordered_map<std::string, int> sounds;
+	std::vector<int> sounds;
 
 public:
 	bool OnUserCreate() override
@@ -70,22 +85,41 @@ public:
 
 		olc::SOUND::InitialiseAudio(44100, 1, 8, 512);
 
+		std::vector<std::string> files;
 		// Fill in the "audio" map.
 		for (const auto& file : std::filesystem::directory_iterator(dir / audioDir))
 		{
-			std::string name = file.path().stem().string();
-			sounds[name] = olc::SOUND::LoadAudioSample(file.path().string());
+			files.push_back(file.path().string());
 		}
 
+		std::sort(files.begin(), files.end());
+
+		for (const auto& file : files)
+		{
+			int id = olc::SOUND::LoadAudioSample(file);
+			if (id == -1) throw std::runtime_error("Failed to load audio sample: " + file);
+			sounds.push_back(id);
+		}
+
+		files.clear();
 		// Fill in the "sprites" map with all the sprites in the "sprites" directory.
 		for (const auto& file : std::filesystem::directory_iterator(dir / spriteDir))
 		{
-			std::string name = file.path().stem().string();
-			sprites[name] = new olc::Decal(new olc::Sprite(file.path().string()));
+			files.push_back(file.path().string());
+		}
+		
+		std::sort(files.begin(), files.end());
+
+		for (const auto& file : files)
+		{
+			sprites.push_back(new olc::Decal(new olc::Sprite(file)));
 		}
 
-		sprites.erase("dino_0");
-		sprites.erase("sprites");
+		// Delete unused sprites. These are present for completeness but are not used in this game.
+		delete sprites[DINO + 0]->sprite;
+		delete sprites[DINO + 0];
+		delete sprites[SPRITES]->sprite;
+		delete sprites[SPRITES];
 
 		srand(std::time(0));
 
@@ -125,11 +159,11 @@ public:
 			if (started && !gameOver)
 			{
 				score++;
-				if (score > 0 && score % 100 == 0) olc::SOUND::PlaySample(sounds["score"]);
+				if (score > 0 && score % 100 == 0) olc::SOUND::PlaySample(sounds[SCORE_AUDIO]);
 			}
 		}
 
-		olc::Decal* dino = sprites["dino_" + std::to_string(dinoIndex)];
+		olc::Decal* dino = sprites[DINO + dinoIndex];
 		int dinoWidth = dino->sprite->width;
 		int dinoHeight = dino->sprite->height;
 
@@ -151,7 +185,7 @@ public:
 			if (started)
 			{
 				isJumping = true;
-				if (jumpTimer == 0.0f) olc::SOUND::PlaySample(sounds["jump"]);
+				if (jumpTimer == 0.0f) olc::SOUND::PlaySample(sounds[JUMP_AUDIO]);
 			};
 		}
 
@@ -172,13 +206,13 @@ public:
 		if (gameOver)
 		{
 			// Draw "Game Over" sprite in the middle of the screen.
-			olc::Decal* gameOverSprite = sprites["gameover"];
+			olc::Decal* gameOverSprite = sprites[GAMEOVER];
 			olc::vf2d gameOverPos = {
 				(float) (screenWidth / 2 - gameOverSprite->sprite->width / 2),
 				(float) (screenHeight / 2 - gameOverSprite->sprite->height / 2 - screenHeight / 6)
 			};
 			DrawDecal(gameOverPos, gameOverSprite);
-			olc::Decal* arrowSprite = sprites["arrow"];
+			olc::Decal* arrowSprite = sprites[ARROW];
 			olc::vf2d arrowPos = {
 				(float) (screenWidth / 2 - arrowSprite->sprite->width / 2),
 				(float) (screenHeight / 2 - arrowSprite->sprite->height / 2 + screenHeight / 10)
@@ -214,7 +248,7 @@ public:
 					scoreBlinking = false;
 					groundSpeed = 500.0f;
 
-					olc::SOUND::PlaySample(sounds["gameover"]);
+					olc::SOUND::PlaySample(sounds[GAMEOVER_AUDIO]);
 					break;
 				}
 			}
@@ -249,8 +283,8 @@ public:
 			int tempScore = score;
 
 			// All number/letter sprites have the same width.
-			int digitWidth = sprites["0"]->sprite->width;
-			int digitHeight = sprites["0"]->sprite->height;
+			int digitWidth = sprites[NUMBER + 0]->sprite->width;
+			int digitHeight = sprites[NUMBER + 0]->sprite->height;
 
 			int offset = 2 * digitWidth;
 			if (scoreBlinking)
@@ -270,9 +304,9 @@ public:
 				offset += 6 * digitWidth;
 				drawNumber(maxScore, offset, 5);
 				offset += 6 * digitWidth;
-				DrawDecal({ (float) (screenWidth - offset), (float) (digitHeight / 2) }, sprites["I"]);
+				DrawDecal({ (float) (screenWidth - offset), (float) (digitHeight / 2) }, sprites[CHAR_I]);
 				offset += digitWidth;
-				DrawDecal({ (float) (screenWidth - offset), (float) (digitHeight / 2) }, sprites["H"]);
+				DrawDecal({ (float) (screenWidth - offset), (float) (digitHeight / 2) }, sprites[CHAR_H]);
 			}
 		}
 	}
@@ -280,15 +314,15 @@ public:
 	void drawNumber(int num, int offset, int pad)
 	{
 		int screenWidth = ScreenWidth();
-		int digitWidth = sprites["0"]->sprite->width;
-		int digitHeight = sprites["0"]->sprite->height;
+		int digitWidth = sprites[NUMBER + 0]->sprite->width;
+		int digitHeight = sprites[NUMBER + 0]->sprite->height;
 		int addedOffset = 0;
 		int count = 0;
 		while (num > 0)
 		{
 			int digit = num % 10;
 			num /= 10;
-			olc::Decal* digitDecal = sprites[std::to_string(digit)];
+			olc::Decal* digitDecal = sprites[NUMBER + digit];
 			DrawDecal({ (float) (screenWidth - offset - addedOffset), (float) (digitHeight / 2) }, digitDecal);
 			addedOffset += digitWidth;
 			count++;
@@ -296,14 +330,14 @@ public:
 
 		for (int i = 0; i < pad - count; i++)
 		{
-			DrawDecal({ (float) (screenWidth - offset - addedOffset), (float) (digitHeight / 2) }, sprites["0"]);
+			DrawDecal({ (float) (screenWidth - offset - addedOffset), (float) (digitHeight / 2) }, sprites[NUMBER + 0]);
 			addedOffset += digitWidth;
 		}
 	}
 
 	void DrawGround(float fElapsedTime)
 	{
-		olc::Decal* ground = sprites["ground"];
+		olc::Decal* ground = sprites[GROUND];
 		int groundWidth = ground->sprite->width;
 		int groundHeight = ground->sprite->height;
 		int screenWidth = ScreenWidth();
@@ -344,7 +378,7 @@ public:
 		// Draw Enemies.
 		for (auto& enemy : enemies)
 		{
-			olc::Decal* sprite = getSprite(enemy.type, enemy.index);
+			olc::Decal* sprite = sprites[enemy.type + enemy.index];
 			if (sprite == nullptr) continue;
 			enemy.pos.x -= fElapsedTime * groundSpeed;
 			DrawDecal(enemy.pos, sprite);
@@ -380,13 +414,14 @@ public:
 		int screenWidth = ScreenWidth();
 		int screenHeight = ScreenHeight();
 
-		int dinoHeight = sprites["dino_1"]->sprite->height;
-		int dinoDuckHeight = sprites["dino_7"]->sprite->height;
+		int dinoHeight = sprites[DINO + 1]->sprite->height;
+		int dinoDuckHeight = sprites[DINO + 7]->sprite->height;
 		int lowPteranodonHeight = (screenHeight - dinoHeight - 8) - dinoDuckHeight;
 		int highPteranodonHeight = screenHeight - 2 * dinoHeight - 8 - 8;
 		int y = rand() % 2 ? lowPteranodonHeight : highPteranodonHeight;
+
 		int index = rand() % 2 + 1;
-		olc::Decal* sprite = getSprite(PTERANODON, index);
+		olc::Decal* sprite = sprites[PTERANODON + index];
 
 		if (enemies.size() == 0)
 		{
@@ -417,7 +452,7 @@ public:
 		if (enemies.size() == 0)
 		{
 			int index = rand() % 8 + 1; // Randomly choose any cactus other than "cactus_9".
-			olc::Decal* sprite = getSprite(CACTUS, index);
+			olc::Decal* sprite = sprites[CACTUS + index];
 			enemies.push_back({
 				sprite->sprite->width, sprite->sprite->height, index, CACTUS,
 				{ (float) screenWidth, (float) (screenHeight - sprite->sprite->height - 4) }
@@ -432,9 +467,9 @@ public:
 				int index = rand() % 9 + 1;
 				// "cactus_9" is the largest cactus sprite.
 				// If we choose this cactus, then we only draw one sprite.
-				if (index == 9 && sprites["cactus_9"]->sprite->width <= jumpLength)
+				if (index == 9 && sprites[CACTUS + 9]->sprite->width <= jumpLength)
 				{
-					olc::Decal* sprite = sprites["cactus_9"];
+					olc::Decal* sprite = sprites[CACTUS + 9];
 					enemies.push_back({
 						sprite->sprite->width, sprite->sprite->height, index, CACTUS,
 						{ (float) screenWidth, (float) (screenHeight - sprite->sprite->height - 4) }
@@ -444,10 +479,11 @@ public:
 				{
 					int offset = 0;
 					// Add 1-4 cactuses in a row.
-					for (int i = 0; i < rand() % 4 + 1; i++) {
+					for (int i = 0; i < rand() % 4 + 1; i++)
+					{
 						if (offset > jumpLength) break;
 						int index = rand() % 8 + 1;
-						olc::Decal* sprite = getSprite(CACTUS, index);
+						olc::Decal* sprite = sprites[CACTUS + index];
 						enemies.push_back({
 							sprite->sprite->width, sprite->sprite->height, index, CACTUS,
 							{ (float) screenWidth + offset, (float) (screenHeight - sprite->sprite->height - 4) }
@@ -465,7 +501,7 @@ public:
 		int screenHeight = ScreenHeight();
 
 		// Draw Clouds.
-		olc::Decal* cloud = sprites["cloud"];
+		olc::Decal* cloud = sprites[CLOUD];
 		int cloudWidth = cloud->sprite->width;
 		int cloudHeight = cloud->sprite->height;
 		for (auto& pos : clouds)
@@ -489,7 +525,7 @@ public:
 		if (started && rand() % 1000 == 0 && clouds.size() < 5)
 		{
 			// All dino sprites have the same dimensions.
-			int dinoHeight = sprites["dino_1"]->sprite->height;
+			int dinoHeight = sprites[DINO + 1]->sprite->height;
 			int begin = cloudHeight + 10;
 			int end = screenHeight - cloudHeight - dinoHeight - 8;
 			int y = rand() % (begin - end) + begin;
@@ -506,19 +542,6 @@ public:
 					clouds.push_back({ (float) screenWidth, (float) y });
 				}
 			}
-		}
-	}
-
-	olc::Decal* getSprite(int type, int index)
-	{
-		switch (type)
-		{
-		case CACTUS:
-			return sprites["cactus_" + std::to_string(index)];
-		case PTERANODON:
-			return sprites["pteranodon_" + std::to_string(index)];
-		default:
-			return nullptr;
 		}
 	}
 };
