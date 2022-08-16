@@ -88,7 +88,7 @@ public:
 
 		std::sort(files.begin(), files.end());
 
-		for (const auto& file : files){
+		for (const auto& file : files) {
 			int id = olc::SOUND::LoadAudioSample(file);
 			if (id == -1) throw std::runtime_error("Failed to load audio sample: " + file);
 			sounds.push_back(id);
@@ -238,6 +238,11 @@ public:
 
 	bool OnUserDestroy() {
 		olc::SOUND::DestroyAudio();
+
+		for (int i = 0; i < sprites.size(); i++) {
+			delete sprites[i]->sprite;
+			delete sprites[i];
+		}
 
 		return true;
 	}
