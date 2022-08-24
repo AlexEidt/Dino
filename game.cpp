@@ -39,7 +39,7 @@ private:
 	float fps = 30.0f;
 	float period = 1 / fps;
 	float elapsed = 0.0f;
-	int dinoIndex = 1;
+	int dinoIndex = 1; // Dino Sprite to draw.
 
 	float jumpDuration = 0.75f; // Jump duration in seconds.
 
@@ -48,8 +48,8 @@ private:
 	bool isDucking = false;
 	bool gameOver = false;
 
-	float jumpTimer = 0.0f;
-	float pteranodonTimer = 0.0f;
+	float jumpTimer = 0.0f; // Timer for Dino Jump.
+	float pteranodonTimer = 0.0f; // Timer for wing flapping.
 
 	bool scoreBlinking = false;
 	float scoreTimer = 0.0f;
@@ -76,7 +76,7 @@ private:
 public:
 	bool OnUserCreate() override {
 		std::filesystem::path dir (std::filesystem::current_path().string());
-    	std::filesystem::path spriteDir ("sprites");
+		std::filesystem::path spriteDir ("sprites");
 		std::filesystem::path audioDir ("audio");
 
 		olc::SOUND::InitialiseAudio(44100, 1, 8, 512);
@@ -291,7 +291,7 @@ public:
 		int digitHeight = sprites[NUMBER + 0]->sprite->height;
 		int addedOffset = 0;
 		int count = 0;
-		while (num > 0) {
+		while (num > 0 && count < 5) {
 			int digit = num % 10;
 			num /= 10;
 			olc::Decal* digitDecal = sprites[NUMBER + digit];
