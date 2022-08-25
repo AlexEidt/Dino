@@ -32,6 +32,9 @@ public:
 	}
 
 private:
+	int screenWidth = 0;
+	int screenHeight = 0;
+
 	float time = 0.0f;
 	float groundSpeed = 500.0f;
 	float maxGroundSpeed = 1500.0f;
@@ -75,6 +78,9 @@ private:
 
 public:
 	bool OnUserCreate() override {
+		screenWidth = ScreenWidth();
+		screenHeight = ScreenHeight();
+
 		std::filesystem::path dir (std::filesystem::current_path().string());
 		std::filesystem::path spriteDir ("sprites");
 		std::filesystem::path audioDir ("audio");
@@ -125,23 +131,21 @@ public:
 		DrawClouds(elapsedTime);
 		DrawEnemies(elapsedTime);
 
-		int screenWidth = ScreenWidth();
-		int screenHeight = ScreenHeight();
-
 		// Draw Dinosaur Character.
 		elapsed += fElapsedTime;
 		if (elapsed > period * 3.0f) { // Update every 3 frames.
 			elapsed = 0.0f;
-			if (gameOver) // Game over.
+			if (gameOver) {
 				dinoIndex = 6;
-			else if (isJumping)
+			} else if (isJumping) {
 				dinoIndex = 1;
-			else if (isDucking) // Dinosaur ducking animation.
+			} else if (isDucking) {
 				dinoIndex = dinoIndex == 7 ? 8 : 7;
-			else if (started) // Dinosaur running animation.
+			} else if (started) { // Dinosaur running animation.
 				dinoIndex = dinoIndex == 3 ? 4 : 3;
-			else // While the dinosaur is standing, it will randomly blink.
+			} else { // While the dinosaur is standing, it will randomly blink.
 				dinoIndex = rand() % 15 ? 1 : 2;
+			}
 
 			// Update score.
 			if (started && !gameOver) {
@@ -171,13 +175,21 @@ public:
 			}
 			if (started) {
 				isJumping = true;
-				if (jumpTimer == 0.0f) olc::SOUND::PlaySample(sounds[JUMP_AUDIO]);
+				if (jumpTimer == 0.0f) {
+					olc::SOUND::PlaySample(sounds[JUMP_AUDIO]);
+				}
 			};
 		}
 
 		// If down arrow is pressed, duck the dinosaur.
-		if (GetKey(olc::Key::DOWN).bPressed) if (started) isDucking = true;
-		if (GetKey(olc::Key::DOWN).bReleased) isDucking = false;
+		if (GetKey(olc::Key::DOWN).bPressed) {
+			if (started) {
+				isDucking = true;
+			}
+		}
+		if (GetKey(olc::Key::DOWN).bReleased) {
+			isDucking = false;
+		}
 
 		if (isJumping && !gameOver) {
 			jumpTimer += fElapsedTime;
@@ -258,7 +270,6 @@ public:
 		}
 
 		if (started || gameOver) {
-			int screenWidth = ScreenWidth();
 			int tempScore = score;
 
 			// All number/letter sprites have the same width.
@@ -286,12 +297,11 @@ public:
 	}
 
 	void drawNumber(int num, int offset, int pad) {
-		int screenWidth = ScreenWidth();
 		int digitWidth = sprites[NUMBER + 0]->sprite->width;
 		int digitHeight = sprites[NUMBER + 0]->sprite->height;
 		int addedOffset = 0;
 		int count = 0;
-		while (num > 0 && count < 5) {
+		while (num > 0 && count < pad) {
 			int digit = num % 10;
 			num /= 10;
 			olc::Decal* digitDecal = sprites[NUMBER + digit];
@@ -310,13 +320,13 @@ public:
 		olc::Decal* ground = sprites[GROUND];
 		int groundWidth = ground->sprite->width;
 		int groundHeight = ground->sprite->height;
-		int screenWidth = ScreenWidth();
-		int screenHeight = ScreenHeight();
 
 		// Draw Ground moving right to left.
 		if (started || gameOver) {
 			int x = - time * groundSpeed;
-			if (x <= -groundWidth) time = 0.0f;
+			if (x <= -groundWidth) {
+				time = 0.0f;
+			}
 			if (x + groundWidth <= screenWidth) {
 				DrawDecal({ (float) (x + groundWidth), (float) (screenHeight - groundHeight) }, ground);
 			}
@@ -335,7 +345,9 @@ public:
 			pteranodonTimer = 0.0f;
 			// Flap the wings of the pteranodons.
 			for (auto& enemy : enemies) {
-				if (enemy.type == PTERANODON) enemy.index = enemy.index % 2 + 1;
+				if (enemy.type == PTERANODON) {
+					enemy.index = enemy.index % 2 + 1;
+				}
 			}
 		}
 		// Draw Enemies.
@@ -367,9 +379,6 @@ public:
 	}
 
 	void addPteranodon() {
-		int screenWidth = ScreenWidth();
-		int screenHeight = ScreenHeight();
-
 		int dinoHeight = sprites[DINO + 1]->sprite->height;
 		int dinoDuckHeight = sprites[DINO + 7]->sprite->height;
 		int lowPteranodonHeight = (screenHeight - dinoHeight - 8) - dinoDuckHeight;
@@ -397,9 +406,6 @@ public:
 	}
 
 	void addCactus() {
-		int screenWidth = ScreenWidth();
-		int screenHeight = ScreenHeight();
-
 		if (enemies.size() == 0) {
 			int index = rand() % 8 + 1; // Randomly choose any cactus other than "cactus_9".
 			olc::Decal* sprite = sprites[CACTUS + index];
@@ -439,9 +445,6 @@ public:
 	}
 
 	void DrawClouds(float fElapsedTime) {
-		int screenWidth = ScreenWidth();
-		int screenHeight = ScreenHeight();
-
 		// Draw Clouds.
 		olc::Decal* cloud = sprites[CLOUD];
 		int cloudWidth = cloud->sprite->width;
@@ -469,6 +472,7 @@ public:
 			int end = screenHeight - cloudHeight - dinoHeight - 8;
 			int y = rand() % (begin - end) + begin;
 
+			// Make sure that clouds are drawn 1.5x cloud length apart to avoid overlap.
 			if (clouds.size() == 0) {
 				clouds.push_back({ (float) screenWidth, (float) y });
 			} else {
