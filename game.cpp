@@ -93,7 +93,7 @@ public:
 		}
 
 		std::sort(files.begin(), files.end());
-
+		// Load Audio wav files from the "audio" directory into the audio vector.
 		for (const auto& file : files) {
 			int id = olc::SOUND::LoadAudioSample(file);
 			if (id == -1) throw std::runtime_error("Failed to load audio sample: " + file);
@@ -106,9 +106,11 @@ public:
 		}
 		
 		std::sort(files.begin(), files.end());
-
+		// Load Sprite png files from the "sprites" directory into the sprites vector.
 		for (const auto& file : files) {
-			sprites.push_back(new olc::Decal(new olc::Sprite(file)));
+			olc::Sprite* sprite = new olc::Sprite(file);
+			if (sprite == nullptr) throw std::runtime_error("Failed to load sprite: " + file);
+			sprites.push_back(new olc::Decal(sprite));
 		}
 
 		// Delete unused sprites. These are present for completeness but are not used in the game.
@@ -131,10 +133,10 @@ public:
 		DrawClouds(elapsedTime);
 		DrawEnemies(elapsedTime);
 
-		// Draw Dinosaur Character.
 		elapsed += fElapsedTime;
 		if (elapsed > period * 3.0f) { // Update every 3 frames.
 			elapsed = 0.0f;
+			// Find correct dinosaur sprite to draw based on game variables.
 			if (gameOver) {
 				dinoIndex = 6;
 			} else if (isJumping) {
@@ -159,20 +161,21 @@ public:
 		olc::Decal* dino = sprites[DINO + dinoIndex];
 		int dinoWidth = dino->sprite->width;
 		int dinoHeight = dino->sprite->height;
-
+		// Use a parabola to model the dinosaur jump. y = -a * (x^2 - b*x).
 		int maxJumpHeight = dinoHeight * 15;
 		float jumpParabola = -maxJumpHeight * (jumpTimer * jumpTimer - jumpDuration * jumpTimer);
 		position.x = 60.0f;
 		position.y = std::max(screenHeight - dinoHeight - 8 - jumpParabola, 0.0f);
 		DrawDecal(position, dino);
 
-		// If space is pressed, start the game.
 		if (GetKey(olc::Key::SPACE).bPressed) {
+			// If space is pressed, start the game.
 			if (!started) {
 				gameOver = false;
 				started = true;
 				enemies.clear();
 			}
+			// If the game is already started, then cause the dinosaur to jump.
 			if (started) {
 				isJumping = true;
 				if (jumpTimer == 0.0f) {
@@ -181,16 +184,7 @@ public:
 			};
 		}
 
-		// If down arrow is pressed, duck the dinosaur.
-		if (GetKey(olc::Key::DOWN).bPressed) {
-			if (started) {
-				isDucking = true;
-			}
-		}
-		if (GetKey(olc::Key::DOWN).bReleased) {
-			isDucking = false;
-		}
-
+		// Wait until the "jumpDuration" is over before the dino can jump again.
 		if (isJumping && !gameOver) {
 			jumpTimer += fElapsedTime;
 			if (jumpTimer > jumpDuration) {
@@ -198,6 +192,10 @@ public:
 				jumpTimer = 0.0f;
 			}
 		}
+
+		// If down arrow is pressed, duck the dinosaur.
+		if (GetKey(olc::Key::DOWN).bPressed && started) isDucking = true;
+		if (GetKey(olc::Key::DOWN).bReleased) isDucking = false;
 
 		if (gameOver) {
 			// Draw "Game Over" sprite in the middle of the screen.
@@ -260,6 +258,7 @@ public:
 	}
 
 	void DrawScore(float fElapsedTime) {
+		// Every time the user gains 100 points, the score will blink on and off for 2 seconds to let them know.
 		if ((score > 0 && score % 100 == 0) || scoreBlinking) {
 			if (!scoreBlinking) scoreBlinking = true;
 			scoreTimer += fElapsedTime;
@@ -279,15 +278,17 @@ public:
 			int offset = 2 * digitWidth;
 			if (scoreBlinking) {
 				if (((int) (scoreTimer * 3)) % 2 == 0) {
-					drawNumber(score / 100 * 100, offset, 5);
+					DrawNumber(score / 100 * 100, offset, 5);
 				}
 			} else {
-				drawNumber(score, offset, 5);
+				DrawNumber(score, offset, 5);
 			}
 
+			// If the user has reached a new max score, their max score will be displayed to the left of their
+			// current score once they lose.
 			if (maxScore > 0) {
 				offset += 6 * digitWidth;
-				drawNumber(maxScore, offset, 5);
+				DrawNumber(maxScore, offset, 5);
 				offset += 6 * digitWidth;
 				DrawDecal({ (float) (screenWidth - offset), (float) (digitHeight / 2) }, sprites[CHAR_I]);
 				offset += digitWidth;
@@ -296,7 +297,7 @@ public:
 		}
 	}
 
-	void drawNumber(int num, int offset, int pad) {
+	void DrawNumber(int num, int offset, int pad) {
 		int digitWidth = sprites[NUMBER + 0]->sprite->width;
 		int digitHeight = sprites[NUMBER + 0]->sprite->height;
 		int addedOffset = 0;
@@ -309,7 +310,7 @@ public:
 			addedOffset += digitWidth;
 			count++;
 		}
-
+		// Zero pad the score so it reaches "pad" number of digits.
 		for (int i = 0; i < pad - count; i++) {
 			DrawDecal({ (float) (screenWidth - offset - addedOffset), (float) (digitHeight / 2) }, sprites[NUMBER + 0]);
 			addedOffset += digitWidth;
@@ -350,6 +351,7 @@ public:
 				}
 			}
 		}
+
 		// Draw Enemies.
 		for (auto& enemy : enemies) {
 			olc::Decal* sprite = sprites[enemy.type + enemy.index];
@@ -371,18 +373,19 @@ public:
 		// Add enemies. Wait until the user has a score of 25 to add enemies.
 		if (score >= 25 && rand() % 200 == 0) {
 			if (rand() % 200 > 50) {
-				addCactus();
+				AddCactus();
 			} else {
-				addPteranodon();
+				AddPteranodon();
 			}			
 		}
 	}
 
-	void addPteranodon() {
+	void AddPteranodon() {
 		int dinoHeight = sprites[DINO + 1]->sprite->height;
 		int dinoDuckHeight = sprites[DINO + 7]->sprite->height;
 		int lowPteranodonHeight = (screenHeight - dinoHeight - 8) - dinoDuckHeight;
 		int highPteranodonHeight = screenHeight - 2 * dinoHeight - 8 - 8;
+		// For the Pteranodon, choose between a low flyer and a high flyer.
 		int y = rand() % 2 ? lowPteranodonHeight : highPteranodonHeight;
 
 		int index = rand() % 2 + 1;
@@ -394,6 +397,8 @@ public:
 				{ (float) screenWidth, (float) y }
 			});
 		} else {
+			// If the "enemies" vector is not empty, then wait and see if the last element's position
+			// is far enough away such that the current enemy can be drawn without any overlap.
 			enemy last = enemies.back();
 			int jumpLength = jumpDuration * groundSpeed;
 			if (last.pos.x < screenWidth - last.width - jumpLength) {
@@ -405,7 +410,7 @@ public:
 		}
 	}
 
-	void addCactus() {
+	void AddCactus() {
 		if (enemies.size() == 0) {
 			int index = rand() % 8 + 1; // Randomly choose any cactus other than "cactus_9".
 			olc::Decal* sprite = sprites[CACTUS + index];
@@ -414,6 +419,8 @@ public:
 				{ (float) screenWidth, (float) (screenHeight - sprite->sprite->height - 4) }
 			});
 		} else {
+			// If the "enemies" vector is not empty, then wait and see if the last element's position
+			// is far enough away such that the current enemy can be drawn without any overlap.
 			enemy last = enemies.back();
 			int jumpLength = jumpDuration * groundSpeed;
 			if (last.pos.x < screenWidth - last.width - jumpLength) {
@@ -476,6 +483,8 @@ public:
 			if (clouds.size() == 0) {
 				clouds.push_back({ (float) screenWidth, (float) y });
 			} else {
+				// If the "clouds" vector is not empty, then wait and see if the last element's position
+				// is far enough away such that the current enemy can be drawn without any overlap.
 				olc::vf2d last = clouds.back();
 				if (last.x < screenWidth - 3 * cloudWidth / 2) {
 					clouds.push_back({ (float) screenWidth, (float) y });
