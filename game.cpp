@@ -269,8 +269,6 @@ public:
 		}
 
 		if (started || gameOver) {
-			int tempScore = score;
-
 			// All number/letter sprites have the same width.
 			int digitWidth = sprites[NUMBER + 0]->sprite->width;
 			int digitHeight = sprites[NUMBER + 0]->sprite->height;
