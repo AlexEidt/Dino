@@ -25,6 +25,11 @@
 #define PTERANODON 33
 #define SPRITES 36
 
+#define SCORE_DIGITS 5
+#define PLAYER_POSITION 60.0f
+#define JUMP_MULTIPLIER 15
+#define GROUND_SPEED 500.0f
+
 class DinoGame : public olc::PixelGameEngine {
 public:
 	DinoGame() {
@@ -36,7 +41,7 @@ private:
 	int screenHeight = 0;
 
 	float time = 0.0f;
-	float groundSpeed = 500.0f;
+	float groundSpeed = GROUND_SPEED;
 	float maxGroundSpeed = 1500.0f;
 	float cloudSpeed = 150.0f;
 	float fps = 30.0f;
@@ -162,9 +167,9 @@ public:
 		int dinoWidth = dino->sprite->width;
 		int dinoHeight = dino->sprite->height;
 		// Use a parabola to model the dinosaur jump. y = -a * (x^2 - b*x).
-		int maxJumpHeight = dinoHeight * 15;
+		int maxJumpHeight = dinoHeight * JUMP_MULTIPLIER;
 		float jumpParabola = -maxJumpHeight * (jumpTimer * jumpTimer - jumpDuration * jumpTimer);
-		position.x = 60.0f;
+		position.x = PLAYER_POSITION;
 		position.y = std::max(screenHeight - dinoHeight - 8 - jumpParabola, 0.0f);
 		DrawDecal(position, dino);
 
@@ -235,7 +240,7 @@ public:
 					score = 0;
 					scoreTimer = 0;
 					scoreBlinking = false;
-					groundSpeed = 500.0f;
+					groundSpeed = GROUND_SPEED;
 
 					olc::SOUND::PlaySample(sounds[GAMEOVER_AUDIO]);
 					break;
@@ -276,21 +281,21 @@ public:
 			int offset = 2 * digitWidth;
 			if (scoreBlinking) {
 				if (((int) (scoreTimer * 3)) % 2 == 0) {
-					DrawNumber(score / 100 * 100, offset, 5);
+					DrawNumber(score / 100 * 100, offset, SCORE_DIGITS);
 				}
 			} else {
-				DrawNumber(score, offset, 5);
+				DrawNumber(score, offset, SCORE_DIGITS);
 			}
 
 			// If the user has reached a new max score, their max score will be displayed to the left of their
 			// current score once they lose.
 			if (maxScore > 0) {
-				offset += 6 * digitWidth;
-				DrawNumber(maxScore, offset, 5);
-				offset += 6 * digitWidth;
-				DrawDecal({ (float) (screenWidth - offset), (float) (digitHeight / 2) }, sprites[CHAR_I]);
+				offset += (SCORE_DIGITS + 1) * digitWidth;
+				DrawNumber(maxScore, offset, SCORE_DIGITS);
+				offset += (SCORE_DIGITS + 1) * digitWidth;
+				DrawDecal({float(screenWidth - offset), float(digitHeight / 2)}, sprites[CHAR_I]);
 				offset += digitWidth;
-				DrawDecal({ (float) (screenWidth - offset), (float) (digitHeight / 2) }, sprites[CHAR_H]);
+				DrawDecal({float(screenWidth - offset), float(digitHeight / 2)}, sprites[CHAR_H]);
 			}
 		}
 	}
@@ -301,16 +306,15 @@ public:
 		int addedOffset = 0;
 		int count = 0;
 		while (num > 0 && count < pad) {
-			int digit = num % 10;
-			num /= 10;
-			olc::Decal* digitDecal = sprites[NUMBER + digit];
-			DrawDecal({ (float) (screenWidth - offset - addedOffset), (float) (digitHeight / 2) }, digitDecal);
+			olc::Decal* digitDecal = sprites[NUMBER + num % 10];
+			DrawDecal({float(screenWidth - offset - addedOffset), float(digitHeight / 2)}, digitDecal);
 			addedOffset += digitWidth;
+			num /= 10;
 			count++;
 		}
 		// Zero pad the score so it reaches "pad" number of digits.
 		for (int i = 0; i < pad - count; i++) {
-			DrawDecal({ (float) (screenWidth - offset - addedOffset), (float) (digitHeight / 2) }, sprites[NUMBER + 0]);
+			DrawDecal({float(screenWidth - offset - addedOffset), float(digitHeight / 2)}, sprites[NUMBER + 0]);
 			addedOffset += digitWidth;
 		}
 	}
@@ -327,11 +331,11 @@ public:
 				time = 0.0f;
 			}
 			if (x + groundWidth <= screenWidth) {
-				DrawDecal({ (float) (x + groundWidth), (float) (screenHeight - groundHeight) }, ground);
+				DrawDecal({float(x + groundWidth), float(screenHeight - groundHeight)}, ground);
 			}
-			DrawDecal({ (float) x, (float) (screenHeight - groundHeight) }, ground);
+			DrawDecal({float(x), float(screenHeight - groundHeight)}, ground);
 		} else {
-			DrawDecal({ 0.0f, (float) (screenHeight - groundHeight) }, ground);
+			DrawDecal({0.0f, float(screenHeight - groundHeight)}, ground);
 		}
 
 		time += fElapsedTime;
@@ -370,7 +374,7 @@ public:
 
 		// Add enemies. Wait until the user has a score of 25 to add enemies.
 		if (score >= 25 && rand() % 200 == 0) {
-			if (rand() % 200 > 50) {
+			if (rand() % 300 > 50) {
 				AddCactus();
 			} else {
 				AddPteranodon();
@@ -388,33 +392,29 @@ public:
 
 		int index = rand() % 2 + 1;
 		olc::Decal* sprite = sprites[PTERANODON + index];
+		int width = sprite->sprite->width;
+		int height = sprite->sprite->height;
 
-		if (enemies.size() == 0) {
-			enemies.push_back({
-				sprite->sprite->width, sprite->sprite->height, index, PTERANODON,
-				{ (float) screenWidth, (float) y }
-			});
+		if (enemies.empty()) {
+			enemies.push_back({width, height, index, PTERANODON, {float(screenWidth), float(y)}});
 		} else {
 			// If the "enemies" vector is not empty, then wait and see if the last element's position
 			// is far enough away such that the current enemy can be drawn without any overlap.
 			enemy last = enemies.back();
 			int jumpLength = jumpDuration * groundSpeed;
 			if (last.pos.x < screenWidth - last.width - jumpLength) {
-				enemies.push_back({
-					sprite->sprite->width, sprite->sprite->height, index, PTERANODON,
-					{ (float) screenWidth, (float) y }
-				});
+				enemies.push_back({width, height, index, PTERANODON, {float(screenWidth), float(y)}});
 			}
 		}
 	}
 
 	void AddCactus() {
-		if (enemies.size() == 0) {
+		if (enemies.empty()) {
 			int index = rand() % 8 + 1; // Randomly choose any cactus other than "cactus_9".
 			olc::Decal* sprite = sprites[CACTUS + index];
 			enemies.push_back({
 				sprite->sprite->width, sprite->sprite->height, index, CACTUS,
-				{ (float) screenWidth, (float) (screenHeight - sprite->sprite->height - 4) }
+				{float(screenWidth), float(screenHeight - sprite->sprite->height - 4)}
 			});
 		} else {
 			// If the "enemies" vector is not empty, then wait and see if the last element's position
@@ -429,18 +429,17 @@ public:
 					olc::Decal* sprite = sprites[CACTUS + 9];
 					enemies.push_back({
 						sprite->sprite->width, sprite->sprite->height, index, CACTUS,
-						{ (float) screenWidth, (float) (screenHeight - sprite->sprite->height - 4) }
+						{float(screenWidth), float(screenHeight - sprite->sprite->height - 4)}
 					});
 				} else {
 					int offset = 0;
 					// Add 1-4 cactuses in a row.
-					for (int i = 0; i < rand() % 4 + 1; i++) {
-						if (offset > jumpLength) break;
+					for (int i = 0; (i < rand() % 4 + 1) && offset <= jumpLength; i++) {
 						int index = rand() % 8 + 1;
 						olc::Decal* sprite = sprites[CACTUS + index];
 						enemies.push_back({
 							sprite->sprite->width, sprite->sprite->height, index, CACTUS,
-							{ (float) screenWidth + offset, (float) (screenHeight - sprite->sprite->height - 4) }
+							{float(screenWidth + offset), float(screenHeight - sprite->sprite->height - 4)}
 						});
 						offset += enemies.back().width;
 					}
@@ -478,14 +477,14 @@ public:
 			int y = rand() % (begin - end) + begin;
 
 			// Make sure that clouds are drawn 1.5x cloud length apart to avoid overlap.
-			if (clouds.size() == 0) {
-				clouds.push_back({ (float) screenWidth, (float) y });
+			if (clouds.empty()) {
+				clouds.push_back({float(screenWidth), float(y)});
 			} else {
 				// If the "clouds" vector is not empty, then wait and see if the last element's position
 				// is far enough away such that the current enemy can be drawn without any overlap.
 				olc::vf2d last = clouds.back();
 				if (last.x < screenWidth - 3 * cloudWidth / 2) {
-					clouds.push_back({ (float) screenWidth, (float) y });
+					clouds.push_back({float(screenWidth), float(y)});
 				}
 			}
 		}
