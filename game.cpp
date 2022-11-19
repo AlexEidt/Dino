@@ -206,14 +206,14 @@ public:
 			// Draw "Game Over" sprite in the middle of the screen.
 			olc::Decal* gameOverSprite = sprites[GAMEOVER];
 			olc::vf2d gameOverPos = {
-				(float) (screenWidth / 2 - gameOverSprite->sprite->width / 2),
-				(float) (screenHeight / 2 - gameOverSprite->sprite->height / 2 - screenHeight / 6)
+				float(screenWidth / 2 - gameOverSprite->sprite->width / 2),
+				float(screenHeight / 2 - gameOverSprite->sprite->height / 2 - screenHeight / 6)
 			};
 			DrawDecal(gameOverPos, gameOverSprite);
 			olc::Decal* arrowSprite = sprites[ARROW];
 			olc::vf2d arrowPos = {
-				(float) (screenWidth / 2 - arrowSprite->sprite->width / 2),
-				(float) (screenHeight / 2 - arrowSprite->sprite->height / 2 + screenHeight / 10)
+				float(screenWidth / 2 - arrowSprite->sprite->width / 2),
+				float(screenHeight / 2 - arrowSprite->sprite->height / 2 + screenHeight / 10)
 			};
 			DrawDecal(arrowPos, arrowSprite);
 		} else {
@@ -280,7 +280,7 @@ public:
 
 			int offset = 2 * digitWidth;
 			if (scoreBlinking) {
-				if (((int) (scoreTimer * 3)) % 2 == 0) {
+				if ((int(scoreTimer * 3)) % 2 == 0) {
 					DrawNumber(score / 100 * 100, offset, SCORE_DIGITS);
 				}
 			} else {
